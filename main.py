@@ -40,73 +40,58 @@ def send_email(message):
         print("Email Sent")
 
 #print('email sent')
-
-def data_store(filename, data):
-
-    with open(filename,'a') as file:
-        file.write(data + '\n')
-
-def data_read(data_file):
-
-    with open(data_file,'r') as file:
-        content = file.read()
-        return content
     
-def db_write(data_list):
+def db_write(table, scraped_data):
 
-    conn = sq.connect('/mnt/c/Users/olwethu.mbane/Documents/data.db')
     cur = conn.cursor()
 
-    band, city, date = data_list
+    data_list = scraped_data.split(',')
+    clean_data_list = [item.strip() for item in data_list]
+    band, city, date = clean_data_list
 
-    query = """
-INSERT INTO events
-VALUES (?,?,?)
-"""
-
+    query = f"""
+    INSERT INTO {table}
+    VALUES (?,?,?)
+    """
     cur.executemany(query, [(band, city, date)])
 
     conn.commit()
-    conn.close()
     
-def db_read(data_list):
+def db_read(table,scraped_data):
 
-    conn = sq.connect('/mnt/c/Users/olwethu.mbane/Documents/data.db')
     cur = conn.cursor()
 
-    band, city, date = data_list
+    data_list = scraped_data.split(',')
+    clean_data_list = [item.strip() for item in data_list]
+    band, city, date = clean_data_list
 
-    query = """
-SELECT * FROM events
-WHERE band = ? AND city = ? AND date = ?
-"""
+    query = f"""
+    SELECT * FROM {table}
+    WHERE band = ? AND city = ? AND date = ?
+    """
     cur.execute(query, (band, city, date))
-
     result = cur.fetchall()
 
     return result
 
 
+if __name__ == "__main__":
 
-if __name__ == "__main__":  
+    db_name = 'music_events'
+    db_table_name = 'events'
+    conn = sq.connect(f'/mnt/c/Users/olwethu.mbane/Documents/{db_name}.db')
     while True:
         html = get_html_source_code(URL)
         scraped_data = scrape_html(html)
-        print(scraped_data)
-
-        scraped_data_list = scraped_data.split(',')
-        scraped_data_tuple = tuple(scraped_data_list)
-        scraped_data_tuple_list = [scraped_data_tuple]
     
+        if scraped_data != 'No upcoming tours':
+            print(scraped_data)
 
-        if scraped_data_list != ['No upcoming tours']:
-
-            read_db_data = db_read(scraped_data_list)
-            print(read_db_data)
+            read_db_data = db_read(db_table_name, scraped_data)
             
-
-            if  scraped_data_tuple_list != read_db_data:
-                db_write(scraped_data_list)
+            if  not read_db_data:
+                print('test2')
+                db_write(db_table_name, scraped_data)
                 
                 email_message = "Subject: Latest Tour"\
                 + '\n' + scraped_data
@@ -116,4 +101,5 @@ if __name__ == "__main__":
                 send_email(email_message)
 
         time.sleep(2)
-            
+
+    conn.close()        
