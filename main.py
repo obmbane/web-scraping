@@ -1,6 +1,6 @@
 import requests as rq
 import selectorlib
-import smtplib, ssl, os
+import smtplib, ssl, os, time
 
 URL = "https://programmer100.pythonanywhere.com/tours/"
 
@@ -36,34 +36,41 @@ def send_email(message):
 
         server.login(username,password)
         server.sendmail(username, receiver, message)
+        print("Email Sent")
 
 #print('email sent')
 
-def store_scraped_values(data):
+def data_store(filename, data):
 
-    with open('data.txt','a') as file:
+    with open(filename,'a') as file:
         file.write(data + '\n')
 
-def data_check(data_file):
+def data_read(data_file):
 
     with open(data_file,'r') as file:
         content = file.read()
         return content
 
 if __name__ == "__main__":  
+    while True:
+        html = get_html_source_code(URL)
+        scraped_data = scrape_html(html)
+        print(scraped_data)
 
-    html = get_html_source_code(URL)
-    scraped_data = scrape_html(html)
-    print(type(scraped_data))
+        file_name = 'data.txt'
 
-    data_store = store_scraped_values(scraped_data)
-    email_message = "Subject: Latest Tour"\
-        + '\n' + scraped_data
-        
-    email_message = email_message.encode("utf-8")
-    file_content = data_check('data.txt')
+        if scraped_data != "No upcoming tours":
+            
+            file_content = data_read(file_name)
 
-    if scraped_data != "No upcoming tours":
-        if scraped_data not in file_content:
-            send_email(email_message)
-            print('email sent')
+            if scraped_data not in file_content:
+                data_store = data_store(file_name, scraped_data)
+                email_message = "Subject: Latest Tour"\
+                + '\n' + scraped_data
+
+                email_message = email_message.encode("utf-8")
+
+                send_email(email_message)
+                
+        time.sleep(5)
+            
