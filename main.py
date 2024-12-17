@@ -44,6 +44,12 @@ def store_scraped_values(data):
     with open('data.txt','a') as file:
         file.write(data + '\n')
 
+def data_check(data_file):
+
+    with open(data_file,'r') as file:
+        content = file.read()
+        return content
+
 if __name__ == "__main__":  
 
     html = get_html_source_code(URL)
@@ -51,12 +57,13 @@ if __name__ == "__main__":
     print(type(scraped_data))
 
     data_store = store_scraped_values(scraped_data)
-    message = "Subject: Latest Tour"\
+    email_message = "Subject: Latest Tour"\
         + '\n' + scraped_data
         
-    message = message.encode("utf-8")
+    email_message = email_message.encode("utf-8")
+    file_content = data_check('data.txt')
 
     if scraped_data != "No upcoming tours":
-        if scraped_data not in 'data.txt':
-            send_email(message)
+        if scraped_data not in file_content:
+            send_email(email_message)
             print('email sent')
