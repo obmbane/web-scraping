@@ -1,6 +1,7 @@
 import requests as rq
 import selectorlib
 import smtplib, ssl, os, time
+import sqlite3 as sq
 
 URL = "https://programmer100.pythonanywhere.com/tours/"
 
@@ -50,6 +51,42 @@ def data_read(data_file):
     with open(data_file,'r') as file:
         content = file.read()
         return content
+    
+def db_write(data_list):
+
+    conn = sq.connect('/mnt/c/Users/olwethu.mbane/Documents/data.db')
+    cur = conn.cursor()
+
+    band, city, date = data_list
+
+    query = """
+INSERT INTO events
+VALUES (?,?,?)
+"""
+
+    cur.executemany(query, [(band, city, date)])
+
+    conn.commit()
+    conn.close()
+    
+def db_read(data_list):
+
+    conn = sq.connect('/mnt/c/Users/olwethu.mbane/Documents/data.db')
+    cur = conn.cursor()
+
+    band, city, date = data_list
+
+    query = """
+SELECT * FROM events
+WHERE band = ? AND city = ? AND date = ?
+"""
+    cur.execute(query, (band, city, date))
+
+    result = cur.fetchall()
+
+    return result
+
+
 
 if __name__ == "__main__":  
     while True:
@@ -57,20 +94,26 @@ if __name__ == "__main__":
         scraped_data = scrape_html(html)
         print(scraped_data)
 
-        file_name = 'data.txt'
+        scraped_data_list = scraped_data.split(',')
+        scraped_data_tuple = tuple(scraped_data_list)
+        scraped_data_tuple_list = [scraped_data_tuple]
+    
 
-        if scraped_data != "No upcoming tours":
+        if scraped_data_list != ['No upcoming tours']:
+
+            read_db_data = db_read(scraped_data_list)
+            print(read_db_data)
             
-            file_content = data_read(file_name)
 
-            if scraped_data not in file_content:
-                data_store = data_store(file_name, scraped_data)
+            if  scraped_data_tuple_list != read_db_data:
+                db_write(scraped_data_list)
+                
                 email_message = "Subject: Latest Tour"\
                 + '\n' + scraped_data
 
                 email_message = email_message.encode("utf-8")
 
                 send_email(email_message)
-                
-        time.sleep(5)
+
+        time.sleep(2)
             
