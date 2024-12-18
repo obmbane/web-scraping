@@ -106,6 +106,4 @@ if __name__ == "__main__":
                 email = Email()
                 email.send(email_message)
 
-        time.sleep(2)
-
-    conn.close()        
+        time.sleep(2)        
