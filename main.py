@@ -9,37 +9,39 @@ HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
 
 
-def get_html_source_code(url):
-    
-    response = rq.get(url,headers=HEADERS)
-    source_code = response.text
+class Event():
+    def get_html(self, url):
+        
+        response = rq.get(url,headers=HEADERS)
+        source_code = response.text
 
-    return source_code
+        return source_code
 
-def scrape_html(source_code):
+    def scrape_html(self, source_code):
 
-    scraper = selectorlib.Extractor.from_yaml_file('extract.yaml')
-    value = scraper.extract(source_code)['tours']
+        scraper = selectorlib.Extractor.from_yaml_file('extract.yaml')
+        value = scraper.extract(source_code)['tours']
 
-    return value
+        return value
 
-def send_email(message):
-    host = "smtp.gmail.com"
-    port = 465
 
-    username = os.getenv('MY_EMAIL')
-    password = os.getenv('APP_PASSWORD')
-    receiver = os.getenv('MY_EMAIL')
+class Email():
+    def send(self, message):
+        host = "smtp.gmail.com"
+        port = 465
 
-    context = ssl.create_default_context()
+        username = os.getenv('MY_EMAIL')
+        password = os.getenv('APP_PASSWORD')
+        receiver = os.getenv('MY_EMAIL')
 
-    with smtplib.SMTP_SSL(host=host, port=port, context=context) as server:
+        context = ssl.create_default_context()
 
-        server.login(username,password)
-        server.sendmail(username, receiver, message)
-        print("Email Sent")
+        with smtplib.SMTP_SSL(host=host, port=port, context=context) as server:
 
-#print('email sent')
+            server.login(username,password)
+            server.sendmail(username, receiver, message)
+            print("Email Sent")
+
     
 def db_write(table, scraped_data):
 
@@ -76,29 +78,31 @@ def db_read(table,scraped_data):
 
 
 if __name__ == "__main__":
-
-    db_name = 'music_events'
+    
+    db_name = 'test'
     db_table_name = 'events'
     conn = sq.connect(f'/mnt/c/Users/olwethu.mbane/Documents/{db_name}.db')
-    while True:
-        html = get_html_source_code(URL)
-        scraped_data = scrape_html(html)
-    
-        if scraped_data != 'No upcoming tours':
-            print(scraped_data)
 
-            read_db_data = db_read(db_table_name, scraped_data)
+    while True:
+        event = Event()
+        source_code = event.get_html(URL)
+        event_data = event.scrape_html(source_code)
+    
+        if event_data != 'No upcoming tours':
+
+            print(event_data)
+            read_db_data = db_read(db_table_name, event_data)
             
             if  not read_db_data:
                 print('test2')
-                db_write(db_table_name, scraped_data)
+                db_write(db_table_name, event_data)
                 
                 email_message = "Subject: Latest Tour"\
-                + '\n' + scraped_data
+                + '\n' + event_data
 
                 email_message = email_message.encode("utf-8")
-
-                send_email(email_message)
+                email = Email()
+                email.send(email_message)
 
         time.sleep(2)
 
