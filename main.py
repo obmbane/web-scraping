@@ -10,6 +10,7 @@ HEADERS = {
 
 
 class Event():
+
     def get_html(self, url):
         
         response = rq.get(url,headers=HEADERS)
@@ -26,6 +27,7 @@ class Event():
 
 
 class Email():
+
     def send(self, message):
         host = "smtp.gmail.com"
         port = 465
@@ -42,60 +44,60 @@ class Email():
             server.sendmail(username, receiver, message)
             print("Email Sent")
 
-    
-def db_write(table, scraped_data):
 
-    cur = conn.cursor()
+class DatabaseSQL():
 
-    data_list = scraped_data.split(',')
-    clean_data_list = [item.strip() for item in data_list]
-    band, city, date = clean_data_list
+    def __init__(self,db_name):
 
-    query = f"""
-    INSERT INTO {table}
-    VALUES (?,?,?)
-    """
-    cur.executemany(query, [(band, city, date)])
+        self.connection = sq.connect(f'/mnt/c/Users/olwethu.mbane/Documents/{db_name}.db')
 
-    conn.commit()
-    
-def db_read(table,scraped_data):
+    def write(self, table, data):
 
-    cur = conn.cursor()
+        data_list = data.split(',')
+        clean_data_list = [item.strip() for item in data_list]
+        band, city, date = clean_data_list
 
-    data_list = scraped_data.split(',')
-    clean_data_list = [item.strip() for item in data_list]
-    band, city, date = clean_data_list
+        query = f"INSERT INTO {table} VALUES (?,?,?)"
 
-    query = f"""
-    SELECT * FROM {table}
-    WHERE band = ? AND city = ? AND date = ?
-    """
-    cur.execute(query, (band, city, date))
-    result = cur.fetchall()
+        cur = self.connection.cursor()
+        cur.executemany(query, [(band, city, date)])
+        self.connection.commit()
+        
+    def read(self, table, data):
 
-    return result
+        data_list = data.split(',')
+        clean_data_list = [item.strip() for item in data_list]
+        band, city, date = clean_data_list
+
+        query = f" SELECT * FROM {table} WHERE band = ? AND city = ? AND date = ? "
+
+        cur = self.connection.cursor()
+        cur.execute(query, (band, city, date))
+        result = cur.fetchall()
+
+        return result
 
 
 if __name__ == "__main__":
     
     db_name = 'test'
-    db_table_name = 'events'
+    table_name = 'events'
     conn = sq.connect(f'/mnt/c/Users/olwethu.mbane/Documents/{db_name}.db')
 
     while True:
         event = Event()
         source_code = event.get_html(URL)
         event_data = event.scrape_html(source_code)
+        print(type(event_data))
     
         if event_data != 'No upcoming tours':
-
+            db = DatabaseSQL(db_name)
             print(event_data)
-            read_db_data = db_read(db_table_name, event_data)
+            read_db_data = db.read(table=table_name, data=event_data)
             
             if  not read_db_data:
                 print('test2')
-                db_write(db_table_name, event_data)
+                db.write(table=table_name,data=event_data )
                 
                 email_message = "Subject: Latest Tour"\
                 + '\n' + event_data
